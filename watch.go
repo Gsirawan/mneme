@@ -285,14 +285,19 @@ func ingestBatch(db *sql.DB, ollama *OllamaClient, sourceFile string, messages [
 		return nil
 	}
 
-	// Phase 2: delete old + insert new (all embeddings ready, minimal failure window)
-	// Note: vec_chunks is a virtual table and doesn't participate in SQLite transactions,
-	// so we use delete-before-insert pattern with orphan cleanup as safety net
 	db.Exec(`DELETE FROM vec_chunks WHERE chunk_id IN (SELECT id FROM chunks WHERE source_file = ?)`, sourceFile)
-	db.Exec(`DELETE FROM chunks WHERE source_file = ?`, sourceFile)
 
+	tx, err := db.Begin()
+	if err != nil {
+		return fmt.Errorf("begin tx: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	tx.Exec(`DELETE FROM chunks WHERE source_file = ?`, sourceFile)
+
+	chunkIDs := make([]int64, 0, len(prepared))
 	for _, pc := range prepared {
-		res, err := db.Exec(
+		res, err := tx.Exec(
 			`INSERT INTO chunks (text, source_file, section_title, header_level, parent_title, section_sequence, chunk_sequence, chunk_total, valid_at, ingested_at)
 			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			pc.chunk.Text, sourceFile, pc.chunk.SectionTitle, pc.chunk.HeaderLevel, pc.chunk.ParentTitle,
@@ -301,11 +306,18 @@ func ingestBatch(db *sql.DB, ollama *OllamaClient, sourceFile string, messages [
 		if err != nil {
 			return fmt.Errorf("insert chunk: %w", err)
 		}
-
 		chunkID, _ := res.LastInsertId()
+		chunkIDs = append(chunkIDs, chunkID)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit: %w", err)
+	}
+
+	for i, pc := range prepared {
 		if _, err := db.Exec(
 			"INSERT INTO vec_chunks (chunk_id, embedding) VALUES (?, ?)",
-			chunkID, pc.serialized,
+			chunkIDs[i], pc.serialized,
 		); err != nil {
 			return fmt.Errorf("insert vec: %w", err)
 		}
@@ -393,17 +405,17 @@ func watchPreflight(ollamaHost, embedModel string) error {
 
 	fmt.Print(renderPreflightStep("wait", "Warmup  loading into VRAM"))
 	warmupClient := NewOllamaClient(baseURL, embedModel)
-	if _, err := warmupClient.Embed(ctx, "warmup"); err != nil {
-		fmt.Print("\r" + renderPreflightStep("fail", "Warmup  embed failed") + "\n")
+	if err := ValidateEmbedDimension(warmupClient); err != nil {
+		fmt.Print("\r" + renderPreflightStep("fail", "Warmup  "+err.Error()) + "\n")
 		return fmt.Errorf("warmup: %w", err)
 	}
-	fmt.Print("\r" + renderPreflightStep("ok", "Warmup  model loaded") + "\n")
+	fmt.Print("\r" + renderPreflightStep("ok", fmt.Sprintf("Warmup  model loaded (%d dims)", EmbedDimension)) + "\n")
 
 	return nil
 }
 
 func runWatch(args []string, mnemeDB, ollamaHost, embedModel, userAlias, assistantAlias string) {
-	fs := flag.NewFlagSet("watch", flag.ExitOnError)
+	fs := flag.NewFlagSet("watch-oc", flag.ExitOnError)
 	batchSize := fs.Int("batch", 6, "text messages before ingesting")
 	pollSec := fs.Int("poll", 3, "poll interval in seconds")
 

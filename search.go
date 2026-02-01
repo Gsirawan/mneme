@@ -31,6 +31,11 @@ func Search(db *sql.DB, ollama *OllamaClient, query string, limit int, asOf stri
 		return nil, err
 	}
 
+	fetchLimit := limit
+	if asOf != "" {
+		fetchLimit = limit * 3
+	}
+
 	rows, err := db.Query(
 		`SELECT v.chunk_id, v.distance, c.text, c.source_file, c.section_title, c.parent_title, c.header_level, c.valid_at
 		 FROM vec_chunks v
@@ -39,8 +44,8 @@ func Search(db *sql.DB, ollama *OllamaClient, query string, limit int, asOf stri
 		 ORDER BY v.distance
 		 LIMIT ?`,
 		serialized,
-		limit,
-		limit,
+		fetchLimit,
+		fetchLimit,
 	)
 	if err != nil {
 		return nil, err
@@ -84,6 +89,10 @@ func Search(db *sql.DB, ollama *OllamaClient, query string, limit int, asOf stri
 			}
 		}
 		results = filtered
+	}
+
+	if len(results) > limit {
+		results = results[:limit]
 	}
 
 	sort.SliceStable(results, func(i, j int) bool {

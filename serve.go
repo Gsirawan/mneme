@@ -6,6 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -84,6 +87,9 @@ func RunMCPServer(db *sql.DB, ollama *OllamaClient, embedModel string) error {
 		}
 		filePath, err := requiredStringArg(args, "file_path")
 		if err != nil {
+			return nil, err
+		}
+		if err := validateIngestPath(filePath); err != nil {
 			return nil, err
 		}
 		validAt, err := optionalStringArg(args, "valid_at")
@@ -176,6 +182,26 @@ func RunMCPServer(db *sql.DB, ollama *OllamaClient, embedModel string) error {
 	})
 
 	return server.Run(context.Background(), &mcp.StdioTransport{})
+}
+
+func validateIngestPath(filePath string) error {
+	cleaned := filepath.Clean(filePath)
+	if filepath.IsAbs(cleaned) {
+		root := os.Getenv("MNEME_INGEST_ROOT")
+		if root == "" {
+			return fmt.Errorf("absolute paths require MNEME_INGEST_ROOT to be set")
+		}
+		absRoot, err := filepath.Abs(root)
+		if err != nil {
+			return fmt.Errorf("invalid MNEME_INGEST_ROOT: %w", err)
+		}
+		if !strings.HasPrefix(cleaned, absRoot+string(filepath.Separator)) && cleaned != absRoot {
+			return fmt.Errorf("path %q is outside allowed root %q", cleaned, absRoot)
+		}
+	} else if strings.Contains(cleaned, "..") {
+		return fmt.Errorf("path %q contains directory traversal", filePath)
+	}
+	return nil
 }
 
 func argsOrEmpty(req *mcp.CallToolRequest) (map[string]any, error) {

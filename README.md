@@ -204,7 +204,7 @@ The best workflow is collaborative: you hint, the AI searches, Mneme retrieves, 
 
 ```bash
 # Watch an OpenCode session
-./mneme watch
+./mneme watch-oc
 
 # Watch a Claude Code session
 ./mneme watch-cc
@@ -268,7 +268,7 @@ Now `./mneme history "react"` finds mentions of React, ReactJS, and react.js.
 | `mneme history "<entity>"` | Chronological mentions of an entity |
 | `mneme status` | System health, chunk count, date range |
 | `mneme serve` | Start MCP stdio server |
-| `mneme watch` | Live OpenCode session watcher with auto-ingestion |
+| `mneme watch-oc` | Live OpenCode session watcher with auto-ingestion |
 | `mneme watch-cc` | Live Claude Code session watcher with auto-ingestion |
 
 ## Project Structure

@@ -249,6 +249,12 @@ func ChunkSection(section Section, maxWords int) []ChunkData {
 	return chunks
 }
 
+type ingestPreparedChunk struct {
+	chunk      ChunkData
+	validAt    sql.NullString
+	serialized []byte
+}
+
 func IngestFile(db *sql.DB, ollama *OllamaClient, filePath string, validAt string) (IngestResult, error) {
 	data, err := os.ReadFile(filePath)
 	if err != nil {
@@ -261,27 +267,7 @@ func IngestFile(db *sql.DB, ollama *OllamaClient, filePath string, validAt strin
 	ctx := context.Background()
 	ingestedAt := time.Now().UTC().Format(time.RFC3339)
 
-	tx, err := db.Begin()
-	if err != nil {
-		return IngestResult{}, err
-	}
-	defer func() {
-		_ = tx.Rollback()
-	}()
-
-	if _, err := tx.Exec(
-		"DELETE FROM vec_chunks WHERE chunk_id IN (SELECT id FROM chunks WHERE source_file = ?)",
-		filePath,
-	); err != nil {
-		return IngestResult{}, err
-	}
-	delResult, err := tx.Exec("DELETE FROM chunks WHERE source_file = ?", filePath)
-	if err != nil {
-		return IngestResult{}, err
-	}
-	deletedCount, _ := delResult.RowsAffected()
-	result.DeletedChunks = deletedCount
-
+	var prepared []ingestPreparedChunk
 	for _, section := range sections {
 		sectionValidAt := section.ValidAt
 		if sectionValidAt == "" {
@@ -315,41 +301,44 @@ func IngestFile(db *sql.DB, ollama *OllamaClient, filePath string, validAt strin
 				return IngestResult{}, err
 			}
 
-			res, err := tx.Exec(
-				`INSERT INTO chunks (text, source_file, section_title, header_level, parent_title, section_sequence, chunk_sequence, chunk_total, valid_at, ingested_at)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-				chunk.Text,
-				chunk.SourceFile,
-				chunk.SectionTitle,
-				chunk.HeaderLevel,
-				chunk.ParentTitle,
-				chunk.SectionSequence,
-				chunk.ChunkSequence,
-				chunk.ChunkTotal,
-				validAtValue,
-				ingestedAt,
-			)
-			if err != nil {
-				return IngestResult{}, err
-			}
-
-			chunkID, err := res.LastInsertId()
-			if err != nil {
-				return IngestResult{}, err
-			}
-
-			if _, err := tx.Exec(
-				"INSERT INTO vec_chunks (chunk_id, embedding) VALUES (?, ?)",
-				chunkID,
-				serialized,
-			); err != nil {
-				return IngestResult{}, err
-			}
+			prepared = append(prepared, ingestPreparedChunk{
+				chunk:      chunk,
+				validAt:    validAtValue,
+				serialized: serialized,
+			})
 		}
 	}
 
-	if err := tx.Commit(); err != nil {
+	if len(prepared) == 0 {
+		return result, nil
+	}
+
+	db.Exec(`DELETE FROM vec_chunks WHERE chunk_id IN (SELECT id FROM chunks WHERE source_file = ?)`, filePath)
+	delResult, err := db.Exec("DELETE FROM chunks WHERE source_file = ?", filePath)
+	if err != nil {
 		return IngestResult{}, err
+	}
+	deletedCount, _ := delResult.RowsAffected()
+	result.DeletedChunks = deletedCount
+
+	for _, pc := range prepared {
+		res, err := db.Exec(
+			`INSERT INTO chunks (text, source_file, section_title, header_level, parent_title, section_sequence, chunk_sequence, chunk_total, valid_at, ingested_at)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			pc.chunk.Text, pc.chunk.SourceFile, pc.chunk.SectionTitle, pc.chunk.HeaderLevel, pc.chunk.ParentTitle,
+			pc.chunk.SectionSequence, pc.chunk.ChunkSequence, pc.chunk.ChunkTotal, pc.validAt, ingestedAt,
+		)
+		if err != nil {
+			return IngestResult{}, err
+		}
+
+		chunkID, _ := res.LastInsertId()
+		if _, err := db.Exec(
+			"INSERT INTO vec_chunks (chunk_id, embedding) VALUES (?, ?)",
+			chunkID, pc.serialized,
+		); err != nil {
+			return IngestResult{}, err
+		}
 	}
 
 	return result, nil

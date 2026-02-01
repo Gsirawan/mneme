@@ -53,7 +53,7 @@ func main() {
 		runHistory(os.Args[2:], mnemeDB)
 	case "status":
 		runStatus(os.Args[2:], mnemeDB, ollamaHost, embedModel)
-	case "watch":
+	case "watch-oc":
 		runWatch(os.Args[2:], mnemeDB, ollamaHost, embedModel, userAlias, assistantAlias)
 	case "watch-cc":
 		runWatchCC(os.Args[2:], mnemeDB, ollamaHost, embedModel, userAlias, assistantAlias)
@@ -81,7 +81,7 @@ Commands:
   history  Find all mentions of an entity in chronological order
   status   Show system status and health
   serve    Start MCP server
-  watch    Watch live OpenCode session and auto-ingest into Mneme
+  watch-oc Watch live OpenCode session and auto-ingest into Mneme
   watch-cc Watch live Claude Code session and auto-ingest into Mneme
   help     Show this help message
 

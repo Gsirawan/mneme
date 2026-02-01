@@ -79,8 +79,9 @@ func History(db *sql.DB, entity string, limit int) ([]HistoryResult, error) {
 	conditions := make([]string, len(names))
 	args := make([]any, len(names))
 	for i, name := range names {
-		conditions[i] = "text LIKE ? COLLATE NOCASE"
-		args[i] = "%" + name + "%"
+		conditions[i] = "text LIKE ? ESCAPE '\\' COLLATE NOCASE"
+		escaped := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(name)
+		args[i] = "%" + escaped + "%"
 	}
 	args = append(args, limit)
 
