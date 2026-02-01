@@ -1,4 +1,4 @@
-module mneme
+module github.com/Gsirawan/mneme
 
 go 1.23.0
 

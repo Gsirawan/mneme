@@ -76,7 +76,7 @@ Commands:
   search   Search for relevant chunks (debug output)
   history  Find all mentions of an entity in chronological order
   status   Show system status and health
-	  serve    Start MCP server
+  serve    Start MCP server
   watch    Watch live OpenCode session and auto-ingest into Mneme
   help     Show this help message
 

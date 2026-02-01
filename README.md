@@ -20,6 +20,9 @@ git clone https://github.com/Gsirawan/mneme.git
 cd mneme
 go build -o mneme .
 
+# Or install directly
+go install github.com/Gsirawan/mneme@latest
+
 # Pull embedding model
 ollama pull qwen3-embedding:0.6b
 
@@ -66,6 +69,9 @@ Your AI Session → Mneme MCP (stdio) → SQLite + sqlite-vec → Ollama (embedd
 git clone https://github.com/Gsirawan/mneme.git
 cd mneme
 go build -o mneme .
+
+# Or install directly
+go install github.com/Gsirawan/mneme@latest
 ```
 
 ### Configure
