@@ -42,7 +42,9 @@ func loadAliasesFromEnv() {
 		if len(names) == 0 {
 			continue
 		}
-		entityAliases[alias] = names
+		for _, name := range names {
+			entityAliases[strings.ToLower(name)] = names
+		}
 	}
 }
 
