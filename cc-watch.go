@@ -70,32 +70,65 @@ func discoverCCProjects(basePath string) ([]string, error) {
 		if !entry.IsDir() {
 			continue
 		}
-		indexPath := filepath.Join(projectsDir, entry.Name(), "sessions-index.json")
-		if _, err := os.Stat(indexPath); err == nil {
+		dirPath := filepath.Join(projectsDir, entry.Name())
+		if _, err := os.Stat(filepath.Join(dirPath, "sessions-index.json")); err == nil {
 			projects = append(projects, entry.Name())
+			continue
+		}
+		dirEntries, err := os.ReadDir(dirPath)
+		if err != nil {
+			continue
+		}
+		for _, de := range dirEntries {
+			if strings.HasSuffix(de.Name(), ".jsonl") {
+				projects = append(projects, entry.Name())
+				break
+			}
 		}
 	}
 	return projects, nil
 }
 
 func discoverCCSessions(basePath, projectDir string) ([]ccSessionEntry, error) {
-	indexPath := filepath.Join(basePath, "projects", projectDir, "sessions-index.json")
-	data, err := os.ReadFile(indexPath)
-	if err != nil {
-		return nil, fmt.Errorf("read sessions index: %w", err)
-	}
+	projectPath := filepath.Join(basePath, "projects", projectDir)
 
-	var index ccSessionsIndex
-	if err := json.Unmarshal(data, &index); err != nil {
-		return nil, fmt.Errorf("parse sessions index: %w", err)
-	}
-
-	// Filter out sidechains, sort by modified desc
-	var sessions []ccSessionEntry
-	for _, s := range index.Entries {
-		if !s.IsSidechain && s.MessageCount > 0 {
-			sessions = append(sessions, s)
+	indexed := make(map[string]bool)
+	indexPath := filepath.Join(projectPath, "sessions-index.json")
+	if data, err := os.ReadFile(indexPath); err == nil {
+		var index ccSessionsIndex
+		if err := json.Unmarshal(data, &index); err == nil {
+			for _, s := range index.Entries {
+				indexed[s.SessionID] = true
+			}
 		}
+	}
+
+	var sessions []ccSessionEntry
+
+	entries, err := os.ReadDir(projectPath)
+	if err != nil {
+		return nil, fmt.Errorf("read project dir: %w", err)
+	}
+
+	for _, entry := range entries {
+		name := entry.Name()
+		if !strings.HasSuffix(name, ".jsonl") {
+			continue
+		}
+		sessionID := strings.TrimSuffix(name, ".jsonl")
+		fullPath := filepath.Join(projectPath, name)
+
+		info, err := entry.Info()
+		if err != nil || info.Size() == 0 {
+			continue
+		}
+
+		if indexed[sessionID] {
+			sessions = append(sessions, buildSessionFromIndex(basePath, projectDir, sessionID))
+			continue
+		}
+
+		sessions = append(sessions, buildSessionFromJSONL(sessionID, fullPath, info))
 	}
 
 	sort.Slice(sessions, func(i, j int) bool {
@@ -103,6 +136,77 @@ func discoverCCSessions(basePath, projectDir string) ([]ccSessionEntry, error) {
 	})
 
 	return sessions, nil
+}
+
+func buildSessionFromIndex(basePath, projectDir, sessionID string) ccSessionEntry {
+	indexPath := filepath.Join(basePath, "projects", projectDir, "sessions-index.json")
+	data, err := os.ReadFile(indexPath)
+	if err != nil {
+		return ccSessionEntry{SessionID: sessionID}
+	}
+	var index ccSessionsIndex
+	if err := json.Unmarshal(data, &index); err != nil {
+		return ccSessionEntry{SessionID: sessionID}
+	}
+	for _, s := range index.Entries {
+		if s.SessionID == sessionID && !s.IsSidechain && s.MessageCount > 0 {
+			return s
+		}
+	}
+	return ccSessionEntry{}
+}
+
+func buildSessionFromJSONL(sessionID, fullPath string, info os.FileInfo) ccSessionEntry {
+	entry := ccSessionEntry{
+		SessionID: sessionID,
+		FullPath:  fullPath,
+		Modified:  info.ModTime().UTC().Format(time.RFC3339),
+	}
+
+	f, err := os.Open(fullPath)
+	if err != nil {
+		return entry
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+
+	msgCount := 0
+	for scanner.Scan() {
+		var line ccJSONLLine
+		if json.Unmarshal(scanner.Bytes(), &line) != nil {
+			continue
+		}
+
+		if line.Type == "summary" {
+			var raw struct {
+				Summary string `json:"summary"`
+			}
+			if json.Unmarshal(scanner.Bytes(), &raw) == nil && raw.Summary != "" {
+				entry.Summary = raw.Summary
+			}
+			continue
+		}
+
+		if line.Type == "user" || line.Type == "assistant" {
+			msgCount++
+			if entry.FirstPrompt == "" && line.Type == "user" {
+				if text, ok := line.Message.Content.(string); ok && len(text) > 0 {
+					entry.FirstPrompt = text
+					if len(entry.FirstPrompt) > 100 {
+						entry.FirstPrompt = entry.FirstPrompt[:100]
+					}
+				}
+			}
+			if entry.Created == "" && line.Timestamp != "" {
+				entry.Created = line.Timestamp
+			}
+		}
+	}
+
+	entry.MessageCount = msgCount
+	return entry
 }
 
 func pickCCProject(projects []string) (string, error) {
