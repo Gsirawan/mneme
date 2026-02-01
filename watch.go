@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -229,6 +230,12 @@ func buildWatchMarkdown(messages []textMessage, sessionTitle string) string {
 	return b.String()
 }
 
+type preparedChunk struct {
+	chunk      ChunkData
+	validAt    sql.NullString
+	serialized []byte
+}
+
 func ingestBatch(db *sql.DB, ollama *OllamaClient, sourceFile string, messages []textMessage, sessionTitle string) error {
 	md := buildWatchMarkdown(messages, sessionTitle)
 	sections := ParseMarkdown(md)
@@ -239,18 +246,16 @@ func ingestBatch(db *sql.DB, ollama *OllamaClient, sourceFile string, messages [
 	ctx := context.Background()
 	ingestedAt := time.Now().UTC().Format(time.RFC3339)
 
-	db.Exec(`DELETE FROM vec_chunks WHERE chunk_id IN (SELECT id FROM chunks WHERE source_file = ?)`, sourceFile)
-	db.Exec(`DELETE FROM chunks WHERE source_file = ?`, sourceFile)
-
+	// Phase 1: embed everything BEFORE touching the DB — safe to fail here
+	var prepared []preparedChunk
 	for _, section := range sections {
 		if strings.TrimSpace(section.Content) == "" {
 			continue
 		}
 
-		sectionValidAt := section.ValidAt
 		var validAtValue sql.NullString
-		if sectionValidAt != "" {
-			validAtValue = sql.NullString{String: sectionValidAt, Valid: true}
+		if section.ValidAt != "" {
+			validAtValue = sql.NullString{String: section.ValidAt, Valid: true}
 		}
 
 		chunks := ChunkSection(section, 600)
@@ -268,23 +273,41 @@ func ingestBatch(db *sql.DB, ollama *OllamaClient, sourceFile string, messages [
 				return fmt.Errorf("serialize: %w", err)
 			}
 
-			res, err := db.Exec(
-				`INSERT INTO chunks (text, source_file, section_title, header_level, parent_title, section_sequence, chunk_sequence, chunk_total, valid_at, ingested_at)
-				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-				chunk.Text, sourceFile, chunk.SectionTitle, chunk.HeaderLevel, chunk.ParentTitle,
-				chunk.SectionSequence, chunk.ChunkSequence, chunk.ChunkTotal, validAtValue, ingestedAt,
-			)
-			if err != nil {
-				return fmt.Errorf("insert chunk: %w", err)
-			}
+			prepared = append(prepared, preparedChunk{
+				chunk:      chunk,
+				validAt:    validAtValue,
+				serialized: serialized,
+			})
+		}
+	}
 
-			chunkID, _ := res.LastInsertId()
-			if _, err := db.Exec(
-				"INSERT INTO vec_chunks (chunk_id, embedding) VALUES (?, ?)",
-				chunkID, serialized,
-			); err != nil {
-				return fmt.Errorf("insert vec: %w", err)
-			}
+	if len(prepared) == 0 {
+		return nil
+	}
+
+	// Phase 2: delete old + insert new (all embeddings ready, minimal failure window)
+	// Note: vec_chunks is a virtual table and doesn't participate in SQLite transactions,
+	// so we use delete-before-insert pattern with orphan cleanup as safety net
+	db.Exec(`DELETE FROM vec_chunks WHERE chunk_id IN (SELECT id FROM chunks WHERE source_file = ?)`, sourceFile)
+	db.Exec(`DELETE FROM chunks WHERE source_file = ?`, sourceFile)
+
+	for _, pc := range prepared {
+		res, err := db.Exec(
+			`INSERT INTO chunks (text, source_file, section_title, header_level, parent_title, section_sequence, chunk_sequence, chunk_total, valid_at, ingested_at)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			pc.chunk.Text, sourceFile, pc.chunk.SectionTitle, pc.chunk.HeaderLevel, pc.chunk.ParentTitle,
+			pc.chunk.SectionSequence, pc.chunk.ChunkSequence, pc.chunk.ChunkTotal, pc.validAt, ingestedAt,
+		)
+		if err != nil {
+			return fmt.Errorf("insert chunk: %w", err)
+		}
+
+		chunkID, _ := res.LastInsertId()
+		if _, err := db.Exec(
+			"INSERT INTO vec_chunks (chunk_id, embedding) VALUES (?, ?)",
+			chunkID, pc.serialized,
+		); err != nil {
+			return fmt.Errorf("insert vec: %w", err)
 		}
 	}
 
@@ -388,7 +411,6 @@ func runWatch(args []string, mnemeDB, ollamaHost, embedModel, userAlias, assista
 		log.Fatalf("parse flags: %v", err)
 	}
 
-	loadAliasesFromEnv()
 	storagePath := openCodeStoragePath()
 
 	sessions, err := discoverSessions(storagePath)
@@ -447,10 +469,38 @@ func runWatch(args []string, mnemeDB, ollamaHost, embedModel, userAlias, assista
 	fmt.Println(infoStyle.Render(fmt.Sprintf("  Skipping %d existing messages. Watching for new...", len(done))))
 	fmt.Println()
 
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt)
+
 	ticker := time.NewTicker(time.Duration(*pollSec) * time.Second)
 	defer ticker.Stop()
 
-	for range ticker.C {
+	flushPending := func() {
+		if len(pending) == 0 {
+			return
+		}
+		fmt.Println()
+		fmt.Println(infoStyle.Render(fmt.Sprintf("  Flushing %d pending messages...", len(pending))))
+		sourceFile := fmt.Sprintf("watch://%s/batch-%d", session.ID, batchNum)
+		if err := ingestBatch(db, ollama, sourceFile, pending, session.Title); err != nil {
+			fmt.Println(renderPreflightStep("fail", fmt.Sprintf("Flush error: %v", err)))
+			return
+		}
+		batchNum++
+		fmt.Println(renderIngest(len(pending), batchNum))
+		pending = nil
+	}
+
+	for {
+		select {
+		case <-sigCh:
+			flushPending()
+			fmt.Println()
+			fmt.Println(infoStyle.Render("  Stopped."))
+			return
+		case <-ticker.C:
+		}
+
 		entries, err := os.ReadDir(msgDir)
 		if err != nil {
 			continue

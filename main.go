@@ -37,6 +37,8 @@ func main() {
 		assistantAlias = "Assistant"
 	}
 
+	loadAliasesFromEnv()
+
 	if len(os.Args) < 2 {
 		printUsage()
 		os.Exit(1)
@@ -53,6 +55,8 @@ func main() {
 		runStatus(os.Args[2:], mnemeDB, ollamaHost, embedModel)
 	case "watch":
 		runWatch(os.Args[2:], mnemeDB, ollamaHost, embedModel, userAlias, assistantAlias)
+	case "watch-cc":
+		runWatchCC(os.Args[2:], mnemeDB, ollamaHost, embedModel, userAlias, assistantAlias)
 	case "serve":
 		runServe(os.Args[2:], mnemeDB, ollamaHost, embedModel)
 	case "help", "-h", "--help":
@@ -78,6 +82,7 @@ Commands:
   status   Show system status and health
   serve    Start MCP server
   watch    Watch live OpenCode session and auto-ingest into Mneme
+  watch-cc Watch live Claude Code session and auto-ingest into Mneme
   help     Show this help message
 
 Examples:
@@ -223,7 +228,6 @@ func runHistory(args []string, mnemeDB string) {
 	}
 
 	entity := fs.Arg(0)
-	loadAliasesFromEnv()
 
 	// Initialize DB
 	db, err := InitDB(mnemeDB)

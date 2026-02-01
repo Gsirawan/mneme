@@ -203,10 +203,14 @@ The best workflow is collaborative: you hint, the AI searches, Mneme retrieves, 
 ### Live Session Watcher
 
 ```bash
+# Watch an OpenCode session
 ./mneme watch
+
+# Watch a Claude Code session
+./mneme watch-cc
 ```
 
-Auto-discovers [OpenCode](https://github.com/sst/opencode) sessions, presents a picker, then polls for new messages. Every N messages (default: 6) get batched, embedded, and ingested. Includes preflight checks — starts Ollama if needed, pulls the model if missing, warms it into VRAM.
+Auto-discovers sessions from [OpenCode](https://github.com/sst/opencode) or [Claude Code](https://docs.anthropic.com/en/docs/claude-code), presents a picker, then polls for new messages. Every N messages (default: 6) get batched, embedded, and ingested. Includes preflight checks — starts Ollama if needed, pulls the model if missing, warms it into VRAM. Pending messages are flushed on Ctrl+C so nothing is lost.
 
 ## How It Works
 
@@ -264,7 +268,8 @@ Now `./mneme history "react"` finds mentions of React, ReactJS, and react.js.
 | `mneme history "<entity>"` | Chronological mentions of an entity |
 | `mneme status` | System health, chunk count, date range |
 | `mneme serve` | Start MCP stdio server |
-| `mneme watch` | Live session watcher with auto-ingestion |
+| `mneme watch` | Live OpenCode session watcher with auto-ingestion |
+| `mneme watch-cc` | Live Claude Code session watcher with auto-ingestion |
 
 ## Project Structure
 
@@ -277,7 +282,8 @@ mneme/
 ├── history.go       # Entity history with configurable aliases
 ├── ollama.go        # Ollama client (embed + generate)
 ├── serve.go         # MCP server implementation
-├── watch.go         # Live session watcher + preflight
+├── watch.go         # OpenCode live session watcher + preflight
+├── cc-watch.go      # Claude Code live session watcher
 ├── status.go        # Health check
 ├── ui.go            # Terminal styling (lipgloss)
 └── *_test.go        # Tests
