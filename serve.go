@@ -21,7 +21,7 @@ func RunMCPServer(db *sql.DB, ollama *OllamaClient, embedModel string) error {
 
 	server.AddTool(&mcp.Tool{
 		Name:        "mneme_search",
-		Description: "Search memories by semantic similarity. Returns raw chunks sorted chronologically.",
+		Description: "Search memories by semantic similarity. Returns raw chunks sorted chronologically. IMPORTANT: When you find a relevant chunk, do NOT skim it. Use the Read tool to open the SourceFile and read the full section (matching SectionTitle) and its sub-sections before responding. The chunk is a pointer — the full context lives in the file.",
 		InputSchema: json.RawMessage(`{
 			"type": "object",
 			"properties": {
@@ -62,9 +62,11 @@ func RunMCPServer(db *sql.DB, ollama *OllamaClient, embedModel string) error {
 			return nil, err
 		}
 
+		whisper := "\n\n---\n⚡ Before responding: if any chunk above is relevant, READ the full section in its SourceFile (use Read tool with the file path). The chunk is a summary — the real context, nuance, and sub-sections live in the original file. Don't skim. Don't guess. Read it."
+
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
-				&mcp.TextContent{Text: string(payload)},
+				&mcp.TextContent{Text: string(payload) + whisper},
 			},
 		}, nil
 	})
