@@ -72,7 +72,7 @@ Your AI Session → Mneme MCP (stdio) → SQLite + sqlite-vec → Ollama (embedd
 - **Entity aliases** — configure via `MNEME_ALIASES` so searching "React" also finds "ReactJS"
 - **Section-aware chunking** — respects `##`/`###` markdown structure with sub-chunking for oversized sections
 - **Re-ingestion** — delete-then-insert. Update a file, re-ingest, chunks refresh cleanly
-- **Live session watcher** — auto-ingest for [OpenCode](https://github.com/sst/opencode) or [Claude Code(https://github.com/anthropics/claude-code)] sessions in real-time
+- **Live session watcher** — auto-ingest for [OpenCode](https://github.com/sst/opencode) or [Claude Code](https://github.com/anthropics/claude-code) sessions in real-time
 - **MCP server** — integrate directly with Claude Code, OpenCode, or any MCP-compatible client
 - **Styled TUI** — colored terminal output with lipgloss
 
