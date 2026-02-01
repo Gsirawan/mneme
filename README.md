@@ -1,6 +1,6 @@
 # Mneme
 
-> *Mneme (NEE-mee) — Greek Muse of memory*
+> _Mneme (NEE-mee) — Greek Muse of memory_
 
 Persistent memory for AI coding sessions. Semantic search over your conversations, architecture decisions, and debugging sessions — so your next AI session picks up where the last one left off.
 
@@ -72,7 +72,7 @@ Your AI Session → Mneme MCP (stdio) → SQLite + sqlite-vec → Ollama (embedd
 - **Entity aliases** — configure via `MNEME_ALIASES` so searching "React" also finds "ReactJS"
 - **Section-aware chunking** — respects `##`/`###` markdown structure with sub-chunking for oversized sections
 - **Re-ingestion** — delete-then-insert. Update a file, re-ingest, chunks refresh cleanly
-- **Live session watcher** — auto-ingest for [OpenCode](https://github.com/sst/opencode) sessions in real-time
+- **Live session watcher** — auto-ingest for [OpenCode](https://github.com/sst/opencode) or [Claude Code(https://github.com/anthropics/claude-code)] sessions in real-time
 - **MCP server** — integrate directly with Claude Code, OpenCode, or any MCP-compatible client
 - **Styled TUI** — colored terminal output with lipgloss
 
@@ -154,12 +154,12 @@ Add to your `.mcp.json` (OpenCode, Claude Code, etc.):
 
 Your AI gets these tools:
 
-| Tool | Description |
-|------|-------------|
-| `mneme_search` | Semantic search — returns relevant chunks chronologically |
-| `mneme_ingest` | Ingest a markdown file into memory |
-| `mneme_history` | All mentions of an entity over time |
-| `mneme_status` | Health check and database stats |
+| Tool            | Description                                               |
+| --------------- | --------------------------------------------------------- |
+| `mneme_search`  | Semantic search — returns relevant chunks chronologically |
+| `mneme_ingest`  | Ingest a markdown file into memory                        |
+| `mneme_history` | All mentions of an entity over time                       |
+| `mneme_status`  | Health check and database stats                           |
 
 ### Getting the Most Out of Mneme
 
@@ -190,11 +190,11 @@ Without this, your AI may never call the Mneme tools — even though they're ava
 
 Semantic search finds meaning, not keywords — but it works best when you help your AI aim:
 
-| Instead of... | Try... |
-|---------------|--------|
-| "What happened yesterday?" | "Search for the database migration discussion" |
-| "Do you remember?" | "Check Mneme for the auth module decision from last sprint" |
-| "What did we decide?" | "Search for 'PostgreSQL vs MongoDB' trade-offs" |
+| Instead of...              | Try...                                                      |
+| -------------------------- | ----------------------------------------------------------- |
+| "What happened yesterday?" | "Search for the database migration discussion"              |
+| "Do you remember?"         | "Check Mneme for the auth module decision from last sprint" |
+| "What did we decide?"      | "Search for 'PostgreSQL vs MongoDB' trade-offs"             |
 
 **Why this matters:** Your AI doesn't know what's in Mneme's database. You do — you lived those conversations. A specific hint ("search for the retry logic we built in the payment service") gets precise results. A vague question gets vague chunks.
 
@@ -239,14 +239,14 @@ We evaluated three approaches...            ← embedded as one chunk
 
 All configuration via environment variables or `.env` file:
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `OLLAMA_HOST` | `localhost:11434` | Ollama server address |
-| `MNEME_DB` | `mneme.db` | SQLite database path |
-| `EMBED_MODEL` | `qwen3-embedding:0.6b` | Embedding model name |
-| `USER_ALIAS` | `User` | Display name for human messages in watcher |
-| `ASSISTANT_ALIAS` | `Assistant` | Display name for AI messages in watcher |
-| `MNEME_ALIASES` | *(empty)* | Entity aliases for history search |
+| Variable          | Default                | Description                                |
+| ----------------- | ---------------------- | ------------------------------------------ |
+| `OLLAMA_HOST`     | `localhost:11434`      | Ollama server address                      |
+| `MNEME_DB`        | `mneme.db`             | SQLite database path                       |
+| `EMBED_MODEL`     | `qwen3-embedding:0.6b` | Embedding model name                       |
+| `USER_ALIAS`      | `User`                 | Display name for human messages in watcher |
+| `ASSISTANT_ALIAS` | `Assistant`            | Display name for AI messages in watcher    |
+| `MNEME_ALIASES`   | _(empty)_              | Entity aliases for history search          |
 
 ### Entity Aliases
 
@@ -261,15 +261,15 @@ Now `./mneme history "react"` finds mentions of React, ReactJS, and react.js.
 
 ## Commands
 
-| Command | Description |
-|---------|-------------|
+| Command                    | Description                                          |
+| -------------------------- | ---------------------------------------------------- |
 | `mneme ingest --file <md>` | Parse and ingest markdown (interactive confirmation) |
-| `mneme search "<query>"` | Semantic search with debug output |
-| `mneme history "<entity>"` | Chronological mentions of an entity |
-| `mneme status` | System health, chunk count, date range |
-| `mneme serve` | Start MCP stdio server |
-| `mneme watch-oc` | Live OpenCode session watcher with auto-ingestion |
-| `mneme watch-cc` | Live Claude Code session watcher with auto-ingestion |
+| `mneme search "<query>"`   | Semantic search with debug output                    |
+| `mneme history "<entity>"` | Chronological mentions of an entity                  |
+| `mneme status`             | System health, chunk count, date range               |
+| `mneme serve`              | Start MCP stdio server                               |
+| `mneme watch-oc`           | Live OpenCode session watcher with auto-ingestion    |
+| `mneme watch-cc`           | Live Claude Code session watcher with auto-ingestion |
 
 ## Project Structure
 
