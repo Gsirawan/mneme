@@ -217,7 +217,7 @@ func TestIngestFile(t *testing.T) {
 		if r.Method != http.MethodPost {
 			t.Fatalf("expected POST, got %s", r.Method)
 		}
-		embedding := make([]float64, 1024)
+		embedding := make([]float64, EmbedDimension)
 		embedding[0] = 0.42
 		resp := embedResponse{Embeddings: [][]float64{embedding}}
 		w.Header().Set("Content-Type", "application/json")
@@ -300,7 +300,7 @@ func TestIngestFileSectionDates(t *testing.T) {
 		if r.Method != http.MethodPost {
 			t.Fatalf("expected POST, got %s", r.Method)
 		}
-		embedding := make([]float64, 1024)
+		embedding := make([]float64, EmbedDimension)
 		embedding[0] = 0.42
 		resp := embedResponse{Embeddings: [][]float64{embedding}}
 		w.Header().Set("Content-Type", "application/json")

@@ -12,7 +12,7 @@ import (
 )
 
 func makeVec(values map[int]float32) []float32 {
-	vec := make([]float32, 1024)
+	vec := make([]float32, EmbedDimension)
 	for idx, val := range values {
 		vec[idx] = val
 	}
