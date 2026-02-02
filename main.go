@@ -14,8 +14,9 @@ import (
 func main() {
 	// Load .env (ignore error if file doesn't exist)
 	_ = godotenv.Load()
+	loadEmbedDimension()
+	loadAliasesFromEnv()
 
-	// Load config from env vars with defaults
 	ollamaHost := os.Getenv("OLLAMA_HOST")
 	if ollamaHost == "" {
 		ollamaHost = "localhost:11434"
@@ -36,8 +37,6 @@ func main() {
 	if assistantAlias == "" {
 		assistantAlias = "Assistant"
 	}
-
-	loadAliasesFromEnv()
 
 	if len(os.Args) < 2 {
 		printUsage()

@@ -4,14 +4,29 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"os"
+	"strconv"
 
 	sqlite_vec "github.com/asg017/sqlite-vec-go-bindings/cgo"
 	_ "github.com/mattn/go-sqlite3"
 )
 
-const EmbedDimension = 1024
+var EmbedDimension = 1024
 
-const schema = `CREATE TABLE IF NOT EXISTS chunks (
+func init() {
+	sqlite_vec.Auto()
+}
+
+func loadEmbedDimension() {
+	if dim := os.Getenv("EMBED_DIM"); dim != "" {
+		if d, err := strconv.Atoi(dim); err == nil && d > 0 {
+			EmbedDimension = d
+		}
+	}
+}
+
+func buildSchema(dim int) string {
+	return fmt.Sprintf(`CREATE TABLE IF NOT EXISTS chunks (
     id INTEGER PRIMARY KEY,
     text TEXT NOT NULL,
     source_file TEXT NOT NULL,
@@ -28,12 +43,9 @@ const schema = `CREATE TABLE IF NOT EXISTS chunks (
 
 CREATE VIRTUAL TABLE IF NOT EXISTS vec_chunks USING vec0(
     chunk_id INTEGER PRIMARY KEY,
-    embedding float[1024] distance_metric=cosine
+    embedding float[%d] distance_metric=cosine
 );
-`
-
-func init() {
-	sqlite_vec.Auto()
+`, dim)
 }
 
 func ValidateEmbedDimension(ollama *OllamaClient) error {
@@ -43,7 +55,7 @@ func ValidateEmbedDimension(ollama *OllamaClient) error {
 		return fmt.Errorf("embed test failed: %w", err)
 	}
 	if len(embedding) != EmbedDimension {
-		return fmt.Errorf("embedding model produces %d dimensions, schema expects %d — change EMBED_MODEL or recreate database", len(embedding), EmbedDimension)
+		return fmt.Errorf("embedding model produces %d dimensions, config expects %d — set EMBED_DIM=%d in .env", len(embedding), EmbedDimension, len(embedding))
 	}
 	return nil
 }
@@ -63,7 +75,7 @@ func InitDB(dbPath string) (*sql.DB, error) {
 		return nil, err
 	}
 
-	if _, err := db.Exec(schema); err != nil {
+	if _, err := db.Exec(buildSchema(EmbedDimension)); err != nil {
 		_ = db.Close()
 		return nil, err
 	}
