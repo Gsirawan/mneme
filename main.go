@@ -11,6 +11,9 @@ import (
 	"github.com/joho/godotenv"
 )
 
+// Version is set at build time via -ldflags
+var Version = "dev"
+
 func main() {
 	// Load .env (ignore error if file doesn't exist)
 	_ = godotenv.Load()
@@ -58,6 +61,9 @@ func main() {
 		runWatchCC(os.Args[2:], mnemeDB, ollamaHost, embedModel, userAlias, assistantAlias)
 	case "serve":
 		runServe(os.Args[2:], mnemeDB, ollamaHost, embedModel)
+	case "version", "-v", "--version":
+		fmt.Printf("mneme %s\n", Version)
+		os.Exit(0)
 	case "help", "-h", "--help":
 		printUsage()
 		os.Exit(0)

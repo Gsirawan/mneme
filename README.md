@@ -35,12 +35,12 @@ See [Getting the Most Out of Mneme](#getting-the-most-out-of-mneme) for setup de
 ## Quick Start
 
 ```bash
-# Build
-git clone https://github.com/Gsirawan/mneme.git
-cd mneme
-go build -o mneme .
+# Download the latest binary (no Go required)
+# See https://github.com/Gsirawan/mneme/releases for all platforms
+curl -L https://github.com/Gsirawan/mneme/releases/latest/download/mneme-linux-amd64 -o mneme
+chmod +x mneme
 
-# Or install directly
+# Or install with Go
 go install github.com/Gsirawan/mneme@latest
 
 # Pull embedding model
@@ -80,8 +80,29 @@ Your AI Session → Mneme MCP (stdio) → SQLite + sqlite-vec → Ollama (embedd
 
 ### Prerequisites
 
-- **Go 1.21+**
-- **Ollama** running locally
+- **Ollama** running locally with an embedding model
+
+### Download binary (recommended)
+
+Grab a prebuilt binary from the [releases page](https://github.com/Gsirawan/mneme/releases):
+
+| Platform | Binary |
+|----------|--------|
+| Linux (x86_64) | `mneme-linux-amd64` |
+| Linux (ARM64) | `mneme-linux-arm64` |
+| macOS (Apple Silicon) | `mneme-macos-arm64` |
+| macOS (Intel) | `mneme-macos-amd64` |
+
+```bash
+chmod +x mneme-*
+mv mneme-* /usr/local/bin/mneme
+```
+
+### Install with Go
+
+```bash
+go install github.com/Gsirawan/mneme@latest
+```
 
 ### Build from source
 
@@ -89,9 +110,6 @@ Your AI Session → Mneme MCP (stdio) → SQLite + sqlite-vec → Ollama (embedd
 git clone https://github.com/Gsirawan/mneme.git
 cd mneme
 go build -o mneme .
-
-# Or install directly
-go install github.com/Gsirawan/mneme@latest
 ```
 
 ### Configure
@@ -270,6 +288,7 @@ Now `./mneme history "react"` finds mentions of React, ReactJS, and react.js.
 | `mneme serve`              | Start MCP stdio server                               |
 | `mneme watch-oc`           | Live OpenCode session watcher with auto-ingestion    |
 | `mneme watch-cc`           | Live Claude Code session watcher with auto-ingestion |
+| `mneme version`            | Print version                                        |
 
 ## Project Structure
 
