@@ -91,7 +91,6 @@ Grab a prebuilt binary from the [releases page](https://github.com/Gsirawan/mnem
 | Linux (x86_64) | `mneme-linux-amd64` |
 | Linux (ARM64) | `mneme-linux-arm64` |
 | macOS (Apple Silicon) | `mneme-macos-arm64` |
-| macOS (Intel) | `mneme-macos-amd64` |
 
 ```bash
 chmod +x mneme-*

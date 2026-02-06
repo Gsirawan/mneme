@@ -25,10 +25,7 @@ jobs:
             goos: darwin
             goarch: arm64
             artifact: mneme-macos-arm64
-          - os: macos-13
-            goos: darwin
-            goarch: amd64
-            artifact: mneme-macos-amd64
+
 
     runs-on: ${{ matrix.os }}
 
