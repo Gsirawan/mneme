@@ -6,3 +6,8 @@
 #
 # Typos are auto-detected from your messages and added here.
 # Text is normalized before embedding for better search matches.
+  theis → thesis
+  vhange → hang
+  github → thumb
+  repoi → rep
+  buil → built

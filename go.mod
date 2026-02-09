@@ -5,10 +5,10 @@ go 1.23.0
 require (
 	github.com/asg017/sqlite-vec-go-bindings v0.1.6
 	github.com/charmbracelet/lipgloss v1.1.0
+	github.com/client9/misspell v0.3.4
 	github.com/joho/godotenv v1.5.1
 	github.com/mattn/go-sqlite3 v1.14.24
 	github.com/modelcontextprotocol/go-sdk v1.2.0
-	github.com/sajari/fuzzy v1.0.0
 )
 
 require (

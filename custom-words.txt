@@ -1,8 +1,0 @@
-# Custom Words for Spell Checking
-# Add domain-specific words here (one per line)
-# These are loaded at runtime - no rebuild needed
-#
-# Examples:
-#   ADNEC
-#   DMT
-#   municipality
