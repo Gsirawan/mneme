@@ -237,6 +237,13 @@ type preparedChunk struct {
 }
 
 func ingestBatch(db *sql.DB, ollama *OllamaClient, sourceFile string, messages []textMessage, sessionTitle string) error {
+	// Detect typos in user messages and add to typos.txt
+	if typos := findTyposInMessages(messages); len(typos) > 0 {
+		if err := updateTyposFile(typos); err != nil {
+			log.Printf("Warning: could not update typos file: %v", err)
+		}
+	}
+
 	md := buildWatchMarkdown(messages, sessionTitle)
 	sections := ParseMarkdown(md)
 	if len(sections) == 0 {

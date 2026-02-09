@@ -44,7 +44,7 @@ func loadCustomTypos() {
 	scanner := bufio.NewScanner(strings.NewReader(string(data)))
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
-		if line == "" {
+		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
 
@@ -87,12 +87,12 @@ func applyCustomTypos(text string) string {
 	return result
 }
 
-func findTyposInMessages(messages []textMessage, userName string) map[string]string {
+func findTyposInMessages(messages []textMessage) map[string]string {
 	typoMap := make(map[string]string)
 	r := misspell.New()
 
 	for _, msg := range messages {
-		if msg.Role != userName {
+		if !msg.IsUser {
 			continue
 		}
 
