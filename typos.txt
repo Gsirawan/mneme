@@ -137,3 +137,4 @@ doen → done
 nned → need
 reall → real
 homw → home
+restert -> restart
