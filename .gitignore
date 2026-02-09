@@ -1,3 +1,5 @@
 mneme
 *.db
+*.db-shm
+*.db-wal
 .env

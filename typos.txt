@@ -1,0 +1,8 @@
+# Mneme Custom Typos
+# Format: typo → correction
+# Example:
+#   teh → the
+#   becuase → because
+#
+# Typos are auto-detected from your messages and added here.
+# Text is normalized before embedding for better search matches.

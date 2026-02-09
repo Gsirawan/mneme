@@ -292,7 +292,9 @@ func IngestFile(db *sql.DB, ollama *OllamaClient, filePath string, validAt strin
 				continue
 			}
 
-			embedding, err := ollama.Embed(ctx, chunk.Text)
+			// Normalize text before embedding (fix typos for better search)
+			normalizedText := normalizeText(chunk.Text)
+			embedding, err := ollama.Embed(ctx, normalizedText)
 			if err != nil {
 				return IngestResult{}, err
 			}
