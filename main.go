@@ -51,6 +51,8 @@ func main() {
 		runIngest(os.Args[2:], mnemeDB, ollamaHost, embedModel)
 	case "search":
 		runSearch(os.Args[2:], mnemeDB, ollamaHost, embedModel)
+	case "search-msg":
+		runSearchMessages(os.Args[2:], mnemeDB, ollamaHost, embedModel)
 	case "history":
 		runHistory(os.Args[2:], mnemeDB)
 	case "status":
@@ -81,18 +83,21 @@ Usage:
   mneme <command> [options]
 
 Commands:
-  ingest   Parse and ingest markdown file into vector database
-  search   Search for relevant chunks (debug output)
-  history  Find all mentions of an entity in chronological order
-  status   Show system status and health
-  serve    Start MCP server
-  watch-oc Watch live OpenCode session and auto-ingest into Mneme
-  watch-cc Watch live Claude Code session and auto-ingest into Mneme
-  help     Show this help message
+  ingest     Parse and ingest markdown file into vector database
+  search     Search for relevant chunks (debug output)
+  search-msg Search messages directly (Phase 2 - semantic + FTS5)
+  history    Find all mentions of an entity in chronological order
+  status     Show system status and health
+  serve      Start MCP server
+  watch-oc   Watch live OpenCode session and auto-ingest into Mneme
+  watch-cc   Watch live Claude Code session and auto-ingest into Mneme
+  help       Show this help message
 
 Examples:
   mneme ingest --file notes.md --valid-at 2025-01-31
   mneme search --as-of 2025-12-31 "key topic"
+  mneme search-msg --fts "baka Lily"
+  mneme search-msg --context 3 "what about habibti"
   mneme history --limit 20 "person name"
   mneme status
 `)
@@ -217,6 +222,83 @@ func runSearch(args []string, mnemeDB, ollamaHost, embedModel string) {
 		}
 		fmt.Printf("%s\n\n", text)
 	}
+}
+
+func runSearchMessages(args []string, mnemeDB, ollamaHost, embedModel string) {
+	fs := flag.NewFlagSet("search-msg", flag.ExitOnError)
+	fts := fs.Bool("fts", false, "use FTS5 exact phrase matching instead of semantic search")
+	contextMinutes := fs.Int("context", 3, "context window in minutes around matched messages")
+	limit := fs.Int("limit", 5, "max results")
+
+	if err := fs.Parse(args); err != nil {
+		log.Fatalf("parse flags: %v", err)
+	}
+
+	if fs.NArg() < 1 {
+		fmt.Fprintf(os.Stderr, "Error: query required as first positional argument\n")
+		os.Exit(1)
+	}
+
+	query := fs.Arg(0)
+
+	// Initialize DB and Ollama
+	db, err := InitDB(mnemeDB)
+	if err != nil {
+		log.Fatalf("init db: %v", err)
+	}
+	defer db.Close()
+
+	ollama := NewOllamaClient("http://"+ollamaHost, embedModel)
+
+	if *fts {
+		// FTS5 exact phrase search
+		results, err := searchMessagesFTS(db, query, *limit)
+		if err != nil {
+			log.Fatalf("fts search: %v", err)
+		}
+
+		if len(results) == 0 {
+			fmt.Println("No exact matches found.")
+			return
+		}
+
+		fmt.Printf("FTS5 matches for %q:\n\n", query)
+		for _, r := range results {
+			ts := fmt.Sprintf("%d", r.Timestamp/1000) // unix seconds
+			fmt.Printf("[%s] %s:\n%s\n\n", ts, r.Role, truncate(r.Text, 300))
+		}
+	} else {
+		// Semantic search with context window
+		contexts, err := searchMessagesWithContext(db, ollama, query, *limit, *contextMinutes)
+		if err != nil {
+			log.Fatalf("search messages: %v", err)
+		}
+
+		if len(contexts) == 0 {
+			fmt.Println("No messages found.")
+			return
+		}
+
+		fmt.Printf("Found %d conversation contexts:\n\n", len(contexts))
+		for i, ctx := range contexts {
+			fmt.Printf("─── Context %d ───\n", i+1)
+			for _, m := range ctx {
+				fmt.Printf("[%s] %s:\n%s\n\n", formatTimestamp(m.Timestamp), m.Role, truncate(m.Text, 400))
+			}
+			fmt.Println()
+		}
+	}
+}
+
+func truncate(s string, max int) string {
+	if len(s) <= max {
+		return s
+	}
+	return s[:max] + "..."
+}
+
+func formatTimestamp(ms int64) string {
+	return fmt.Sprintf("%d", ms/1000)
 }
 
 func runHistory(args []string, mnemeDB string) {

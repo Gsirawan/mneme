@@ -352,6 +352,8 @@ func readCCJSONL(filePath, userAlias, assistantAlias string) ([]textMessage, err
 				Text:      cleaned,
 				Timestamp: ts,
 				IsUser:    true,
+				MessageID: entry.UUID,
+				SessionID: entry.SessionID,
 			})
 		}
 
@@ -390,6 +392,8 @@ func readCCJSONL(filePath, userAlias, assistantAlias string) ([]textMessage, err
 				Text:      cleaned,
 				Timestamp: ts,
 				IsUser:    false,
+				MessageID: entry.UUID,
+				SessionID: entry.SessionID,
 			})
 		}
 	}

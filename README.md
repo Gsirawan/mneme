@@ -67,14 +67,16 @@ Your AI Session → Mneme MCP (stdio) → SQLite + sqlite-vec → Ollama (embedd
 ## Features
 
 - **Semantic search** — find memories by meaning, not keywords
+- **Message-level search** (v0.3) — search actual words you said, not just compressed chunks
+- **Context windows** (v0.3) — returns conversation context around matched messages
+- **FTS5 exact phrase** (v0.3) — find exact phrases like "baka Lily" instantly
 - **Temporal metadata** — date extraction from markdown headers (`## January 31, 2026 — 14:00`)
 - **Date filtering** — `--as-of 2026-01-15` returns only memories from before that date
 - **Entity aliases** — configure via `MNEME_ALIASES` so searching "React" also finds "ReactJS"
 - **Section-aware chunking** — respects `##`/`###` markdown structure with sub-chunking for oversized sections
-- **Re-ingestion** — delete-then-insert. Update a file, re-ingest, chunks refresh cleanly
+- **Typo normalization** — custom typos.txt for search consistency
 - **Live session watcher** — auto-ingest for [OpenCode](https://github.com/sst/opencode) or [Claude Code](https://github.com/anthropics/claude-code) sessions in real-time
 - **MCP server** — integrate directly with Claude Code, OpenCode, or any MCP-compatible client
-- **Styled TUI** — colored terminal output with lipgloss
 
 ## Installation
 

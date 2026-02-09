@@ -63,6 +63,8 @@ type textMessage struct {
 	Text      string
 	Timestamp time.Time
 	IsUser    bool
+	MessageID string // Phase 2: unique message identifier
+	SessionID string // Phase 2: session this message belongs to
 }
 
 func openCodeStoragePath() string {
@@ -204,6 +206,8 @@ func readTextFromMessage(storagePath, sessionID, msgID, userAlias, assistantAlia
 		Text:      cleaned,
 		Timestamp: time.UnixMilli(msg.Time.Created),
 		IsUser:    isUser,
+		MessageID: msgID,
+		SessionID: sessionID,
 	}, nil
 }
 
@@ -242,6 +246,13 @@ func ingestBatch(db *sql.DB, ollama *OllamaClient, sourceFile string, messages [
 		if err := updateTyposFile(typos); err != nil {
 			log.Printf("Warning: could not update typos file: %v", err)
 		}
+	}
+
+	// Phase 2: Store individual messages with embeddings for direct search
+	if inserted, err := insertMessages(db, ollama, messages); err != nil {
+		log.Printf("Warning: message insert failed: %v", err)
+	} else if inserted > 0 {
+		log.Printf("Stored %d messages with embeddings", inserted)
 	}
 
 	md := buildWatchMarkdown(messages, sessionTitle)
