@@ -162,6 +162,70 @@ func RunMCPServer(db *sql.DB, ollama *OllamaClient, embedModel string) error {
 	})
 
 	server.AddTool(&mcp.Tool{
+		Name:        "mneme_search_msg",
+		Description: "Search messages directly with context window. Returns conversation snippets around matching messages. Use for finding specific discussions or phrases.",
+		InputSchema: json.RawMessage(`{
+			"type": "object",
+			"properties": {
+				"query": {"type": "string", "description": "Search query"},
+				"fts": {"type": "boolean", "description": "Use exact phrase matching (FTS5/LIKE) instead of semantic search"},
+				"context": {"type": "integer", "description": "Context window in minutes (default 3)"},
+				"limit": {"type": "integer", "description": "Maximum results (default 5)"}
+			},
+			"required": ["query"]
+		}`),
+	}, func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		args, err := argsOrEmpty(req)
+		if err != nil {
+			return nil, err
+		}
+		query, err := requiredStringArg(args, "query")
+		if err != nil {
+			return nil, err
+		}
+		useFTS, _, _ := optionalBoolArg(args, "fts")
+		contextMins, ok, _ := optionalIntArg(args, "context")
+		if !ok || contextMins <= 0 {
+			contextMins = 3
+		}
+		limit, ok, _ := optionalIntArg(args, "limit")
+		if !ok || limit <= 0 {
+			limit = 5
+		}
+
+		if useFTS {
+			results, err := searchMessagesFTS(db, query, limit)
+			if err != nil {
+				return nil, err
+			}
+			payload, err := json.Marshal(results)
+			if err != nil {
+				return nil, err
+			}
+			return &mcp.CallToolResult{
+				Content: []mcp.Content{
+					&mcp.TextContent{Text: string(payload)},
+				},
+			}, nil
+		}
+
+		// Semantic search with context
+		contexts, err := searchMessagesWithContext(db, ollama, query, limit, contextMins)
+		if err != nil {
+			return nil, err
+		}
+		payload, err := json.Marshal(contexts)
+		if err != nil {
+			return nil, err
+		}
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: string(payload)},
+			},
+		}, nil
+	})
+
+	server.AddTool(&mcp.Tool{
 		Name:        "mneme_status",
 		Description: "Get system status and health details.",
 		InputSchema: json.RawMessage(`{
@@ -242,6 +306,18 @@ func optionalStringArg(args map[string]any, key string) (string, error) {
 		return "", fmt.Errorf("argument %s must be a string", key)
 	}
 	return str, nil
+}
+
+func optionalBoolArg(args map[string]any, key string) (bool, bool, error) {
+	value, ok := args[key]
+	if !ok || value == nil {
+		return false, false, nil
+	}
+	b, ok := value.(bool)
+	if !ok {
+		return false, true, fmt.Errorf("argument %s must be a boolean", key)
+	}
+	return b, true, nil
 }
 
 func optionalIntArg(args map[string]any, key string) (int, bool, error) {
