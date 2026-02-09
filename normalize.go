@@ -2,22 +2,44 @@ package main
 
 import (
 	"bufio"
+	_ "embed"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 
-	"github.com/client9/misspell"
+	"github.com/sajari/fuzzy"
 )
 
-var normalizer *misspell.Replacer
+//go:embed words.txt
+var embeddedWords string
+
+var spellModel *fuzzy.Model
 var customTypos map[string]string
 var typosMutex sync.RWMutex
 
 func init() {
-	normalizer = misspell.New()
+	initSpellModel()
 	loadCustomTypos()
+}
+
+func initSpellModel() {
+	spellModel = fuzzy.NewModel()
+	spellModel.SetThreshold(1)
+	spellModel.SetDepth(2)
+
+	// Train with embedded dictionary
+	words := strings.Split(embeddedWords, "\n")
+	var cleaned []string
+	for _, w := range words {
+		w = strings.TrimSpace(w)
+		if w != "" {
+			cleaned = append(cleaned, w)
+		}
+	}
+	spellModel.Train(cleaned)
+	log.Printf("Spell model trained with %d words", len(cleaned))
 }
 
 func getTyposPath() string {
@@ -68,10 +90,45 @@ func normalizeText(text string) string {
 		return text
 	}
 
-	normalized, _ := normalizer.Replace(text)
-	normalized = applyCustomTypos(normalized)
+	// Apply custom typos first
+	normalized := applyCustomTypos(text)
 
-	return normalized
+	// Then apply spell correction word by word
+	words := strings.Fields(normalized)
+	for i, word := range words {
+		// Preserve punctuation
+		prefix, core, suffix := splitPunctuation(word)
+		if len(core) >= 3 {
+			corrected := spellModel.SpellCheck(strings.ToLower(core))
+			if corrected != "" && corrected != strings.ToLower(core) {
+				// Preserve original case if it was capitalized
+				if len(core) > 0 && core[0] >= 'A' && core[0] <= 'Z' {
+					corrected = strings.Title(corrected)
+				}
+				words[i] = prefix + corrected + suffix
+			}
+		}
+	}
+
+	return strings.Join(words, " ")
+}
+
+func splitPunctuation(word string) (prefix, core, suffix string) {
+	start := 0
+	end := len(word)
+
+	for start < end && !isAlpha(word[start]) {
+		start++
+	}
+	for end > start && !isAlpha(word[end-1]) {
+		end--
+	}
+
+	return word[:start], word[start:end], word[end:]
+}
+
+func isAlpha(c byte) bool {
+	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
 }
 
 func applyCustomTypos(text string) string {
@@ -89,7 +146,6 @@ func applyCustomTypos(text string) string {
 
 func findTyposInMessages(messages []textMessage) map[string]string {
 	typoMap := make(map[string]string)
-	r := misspell.New()
 
 	for _, msg := range messages {
 		if !msg.IsUser {
@@ -98,13 +154,14 @@ func findTyposInMessages(messages []textMessage) map[string]string {
 
 		words := strings.Fields(msg.Text)
 		for _, word := range words {
-			clean := strings.Trim(word, ".,;:!?\"'()[]{}")
+			_, core, _ := splitPunctuation(word)
+			clean := strings.ToLower(core)
 			if clean == "" || len(clean) < 3 {
 				continue
 			}
 
-			corrected, _ := r.Replace(clean)
-			if corrected != clean && corrected != "" {
+			corrected := spellModel.SpellCheck(clean)
+			if corrected != "" && corrected != clean {
 				typoMap[clean] = corrected
 			}
 		}
