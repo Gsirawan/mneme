@@ -1,13 +1,139 @@
-# Mneme Custom Typos
+# Ghaith's Typos - extracted from mneme conversations
 # Format: typo → correction
-# Example:
-#   teh → the
-#   becuase → because
-#
-# Typos are auto-detected from your messages and added here.
-# Text is normalized before embedding for better search matches.
-  theis → thesis
-  vhange → hang
-  github → thumb
-  repoi → rep
-  buil → built
+
+# Common patterns
+ytou → you
+youu → you
+wwhen → when
+wehre → where
+wass → was
+untill → until
+dont → don't
+didn → didn't
+
+# Double letters
+testt → test
+lovee → love
+finee → fine
+functionn → function
+keeep → keep
+youu → you
+
+# Swapped/missing letters
+whsiper → whisper
+visiable → visible
+vhange → change
+vuild → build
+vonder → wonder
+vctor → vector
+typoo → typo
+teste → test
+tuch → touch
+togather → together
+someting → something
+sentance → sentence
+seearch → search
+saprate → separate
+remmeber → remember
+remmebr → remember
+rememebr → remember
+realtionship → relationship
+realtion → relation
+pleas → please
+partener → partner
+lokk → look
+loged → logged
+heloo → hello
+funnty → funny
+discribe → describe
+chenck → chunk
+chunck → chunk
+chack → check
+butr → but
+abut → about
+theis → this
+
+# Tech terms
+maessages → messages
+messeges → messages
+masseges → messages
+massages → messages
+memeory → memory
+emedding → embedding
+embbediing → embedding
+embading → embedding
+tempral → temporal
+trempral → temporal
+structuerd → structured
+unstrecuterd → unstructured
+piplelines → pipelines
+pararell → parallel
+pararlle → parallel
+
+# Domain words
+prouremenr → procurement
+proformance → performance
+proffisinal → professional
+resoults → results
+depoly → deploy
+ingrest → ingest
+docuements → documents
+
+# Common shortcuts gone wrong
+alot → a lot
+allot → a lot
+alrady → already
+actuly → actually
+usaly → usually
+usefyl → useful
+usless → useless
+defult → default
+additinal → additional
+
+# Names/tools
+syrya → surya
+suyra → surya
+mistravl → mistral
+micrsoft → microsoft
+henoycomb → honeycomb
+tumax → tmux
+
+# Misc
+toest → toast
+beatiful → beautiful
+applolgise → apologize
+happining → happening
+handelling → handling
+handel → handle
+finshed → finished
+crteate → create
+crate → create
+cpoy → copy
+coreectlly → correctly
+contiune → continue
+confussen → confusion
+complecate → complicate
+crached → crashed
+cleain → clean
+cappture → capture
+btach → batch
+desgin → design
+proceess → process
+prober → proper
+notthing → nothing
+longe → long
+lastley → lastly
+estamiated → estimated
+emotionaly → emotionally
+durting → during
+instracted → instructed
+inrelevent → irrelevant
+incloud → include
+levrage → leverage
+upgread → upgrade
+upgreade → upgrade
+reppo → repo
+doen → done
+nned → need
+reall → real
+homw → home
