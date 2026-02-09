@@ -38,8 +38,47 @@ func initSpellModel() {
 			cleaned = append(cleaned, w)
 		}
 	}
+
+	// Load custom words from runtime file
+	customWords := loadCustomWords()
+	cleaned = append(cleaned, customWords...)
+
 	spellModel.Train(cleaned)
-	log.Printf("Spell model trained with %d words", len(cleaned))
+	log.Printf("Spell model trained with %d words (%d custom)", len(cleaned), len(customWords))
+}
+
+func getCustomWordsPath() string {
+	exe, err := os.Executable()
+	if err != nil {
+		return "custom-words.txt"
+	}
+	return filepath.Join(filepath.Dir(exe), "custom-words.txt")
+}
+
+func loadCustomWords() []string {
+	var words []string
+
+	wordsPath := getCustomWordsPath()
+	data, err := os.ReadFile(wordsPath)
+	if err != nil {
+		// File doesn't exist - that's fine, it's optional
+		return words
+	}
+
+	scanner := bufio.NewScanner(strings.NewReader(string(data)))
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		words = append(words, strings.ToLower(line))
+	}
+
+	if len(words) > 0 {
+		log.Printf("Loaded %d custom words from %s", len(words), wordsPath)
+	}
+
+	return words
 }
 
 func getTyposPath() string {
