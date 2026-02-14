@@ -14,31 +14,20 @@ import (
 	"os/signal"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"strings"
+	"syscall"
 	"time"
 
 	sqlite_vec "github.com/asg017/sqlite-vec-go-bindings/cgo"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 type ocSession struct {
-	ID        string `json:"id"`
-	Slug      string `json:"slug"`
-	Title     string `json:"title"`
-	ParentID  string `json:"parentID"`
-	Directory string `json:"directory"`
-	Time      struct {
-		Created int64 `json:"created"`
-		Updated int64 `json:"updated"`
-	} `json:"time"`
-}
-
-type ocMessage struct {
-	ID   string `json:"id"`
-	Role string `json:"role"`
-	Time struct {
-		Created int64 `json:"created"`
-	} `json:"time"`
+	ID       string
+	Slug     string
+	Title    string
+	ParentID sql.NullString
+	Updated  int64
 }
 
 type ocPart struct {
@@ -48,6 +37,7 @@ type ocPart struct {
 
 var noisePatterns = []*regexp.Regexp{
 	regexp.MustCompile(`(?s)\[search-mode\].*?---\s*\n`),
+	regexp.MustCompile(`(?s)\[analyze-mode\].*?---\s*\n`),
 	regexp.MustCompile(`(?s)\[SYSTEM DIRECTIVE[^\]]*\].*?(?:\[Status:[^\]]*\])`),
 	regexp.MustCompile(`(?s)# Continuation Prompt.*`),
 	regexp.MustCompile(`\(sisyphus\)\s*`),
@@ -56,6 +46,9 @@ var noisePatterns = []*regexp.Regexp{
 	regexp.MustCompile(`(?s)\[BACKGROUND TASK COMPLETED\].*?\n`),
 	regexp.MustCompile(`(?s)\[Agent Usage Reminder\].*?(?:\n\n|\z)`),
 	regexp.MustCompile(`(?s)\[Category\+Skill Reminder\].*?(?:\n\n|\z)`),
+	regexp.MustCompile(`(?s)<system-reminder>.*?</system-reminder>`),
+	regexp.MustCompile(`(?s)\[ALL BACKGROUND TASKS COMPLETE\].*?(?:\n\n|\z)`),
+	regexp.MustCompile(`(?s)\[SYSTEM REMINDER[^\]]*\].*?(?:\n\n|\z)`),
 }
 
 type textMessage struct {
@@ -67,39 +60,31 @@ type textMessage struct {
 	SessionID string // Phase 2: session this message belongs to
 }
 
-func openCodeStoragePath() string {
+func openCodeDBPath() string {
 	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".local", "share", "opencode", "storage")
+	return filepath.Join(home, ".local", "share", "opencode", "opencode.db")
 }
 
-func discoverSessions(storagePath string) ([]ocSession, error) {
-	sessionDir := filepath.Join(storagePath, "session", "global")
-	entries, err := os.ReadDir(sessionDir)
+func discoverSessions(ocDB *sql.DB) ([]ocSession, error) {
+	rows, err := ocDB.Query(`
+		SELECT id, slug, title, parent_id, time_updated 
+		FROM session 
+		WHERE parent_id IS NULL 
+		ORDER BY time_updated DESC
+	`)
 	if err != nil {
-		return nil, fmt.Errorf("read session dir: %w", err)
+		return nil, fmt.Errorf("query sessions: %w", err)
 	}
+	defer rows.Close()
 
 	var sessions []ocSession
-	for _, entry := range entries {
-		if !strings.HasSuffix(entry.Name(), ".json") {
-			continue
-		}
-		data, err := os.ReadFile(filepath.Join(sessionDir, entry.Name()))
-		if err != nil {
-			continue
-		}
+	for rows.Next() {
 		var s ocSession
-		if err := json.Unmarshal(data, &s); err != nil {
+		if err := rows.Scan(&s.ID, &s.Slug, &s.Title, &s.ParentID, &s.Updated); err != nil {
 			continue
 		}
-		if s.ParentID == "" {
-			sessions = append(sessions, s)
-		}
+		sessions = append(sessions, s)
 	}
-
-	sort.Slice(sessions, func(i, j int) bool {
-		return sessions[i].Time.Updated > sessions[j].Time.Updated
-	})
 
 	return sessions, nil
 }
@@ -115,7 +100,7 @@ func pickSession(sessions []ocSession) (ocSession, error) {
 	}
 
 	for i, s := range sessions[:limit] {
-		updated := time.UnixMilli(s.Time.Updated).Format("Jan 02, 2006 15:04")
+		updated := time.UnixMilli(s.Updated).Format("Jan 02, 2006 15:04")
 		slug := s.Slug
 		if slug == "" {
 			slug = "(no slug)"
@@ -151,34 +136,59 @@ func stripNoise(text string) string {
 	return strings.TrimSpace(text)
 }
 
-func readTextFromMessage(storagePath, sessionID, msgID, userAlias, assistantAlias string) (*textMessage, error) {
-	msgPath := filepath.Join(storagePath, "message", sessionID, msgID+".json")
-	data, err := os.ReadFile(msgPath)
+func getExistingMessageIDs(ocDB *sql.DB, sessionID string) (map[string]bool, error) {
+	rows, err := ocDB.Query(`SELECT id FROM message WHERE session_id = ?`, sessionID)
 	if err != nil {
 		return nil, err
 	}
-	var msg ocMessage
-	if err := json.Unmarshal(data, &msg); err != nil {
-		return nil, err
-	}
+	defer rows.Close()
 
-	partDir := filepath.Join(storagePath, "part", msgID)
-	entries, err := os.ReadDir(partDir)
-	if err != nil {
-		return nil, err
-	}
-
-	var texts []string
-	for _, entry := range entries {
-		if !strings.HasSuffix(entry.Name(), ".json") {
+	ids := make(map[string]bool)
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
 			continue
 		}
-		pdata, err := os.ReadFile(filepath.Join(partDir, entry.Name()))
-		if err != nil {
+		ids[id] = true
+	}
+	return ids, nil
+}
+
+func readTextFromDB(ocDB *sql.DB, sessionID, msgID, userAlias, assistantAlias string) (*textMessage, error) {
+	var data string
+	var timeCreated int64
+	err := ocDB.QueryRow(`
+		SELECT data, time_created FROM message WHERE id = ? AND session_id = ?
+	`, msgID, sessionID).Scan(&data, &timeCreated)
+	if err != nil {
+		return nil, err
+	}
+
+	var msgData struct {
+		Role string `json:"role"`
+	}
+	if err := json.Unmarshal([]byte(data), &msgData); err != nil {
+		return nil, err
+	}
+
+	rows, err := ocDB.Query(`
+		SELECT data FROM part 
+		WHERE message_id = ? AND session_id = ?
+		ORDER BY time_created
+	`, msgID, sessionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var texts []string
+	for rows.Next() {
+		var partData string
+		if err := rows.Scan(&partData); err != nil {
 			continue
 		}
 		var part ocPart
-		if err := json.Unmarshal(pdata, &part); err != nil {
+		if err := json.Unmarshal([]byte(partData), &part); err != nil {
 			continue
 		}
 		if part.Type == "text" && part.Text != "" {
@@ -195,7 +205,7 @@ func readTextFromMessage(storagePath, sessionID, msgID, userAlias, assistantAlia
 		return nil, nil
 	}
 
-	isUser := msg.Role != "assistant"
+	isUser := msgData.Role != "assistant"
 	role := userAlias
 	if !isUser {
 		role = assistantAlias
@@ -204,11 +214,35 @@ func readTextFromMessage(storagePath, sessionID, msgID, userAlias, assistantAlia
 	return &textMessage{
 		Role:      role,
 		Text:      cleaned,
-		Timestamp: time.UnixMilli(msg.Time.Created),
+		Timestamp: time.UnixMilli(timeCreated),
 		IsUser:    isUser,
 		MessageID: msgID,
 		SessionID: sessionID,
 	}, nil
+}
+
+func getNewMessages(ocDB *sql.DB, sessionID string, done map[string]bool) ([]string, error) {
+	rows, err := ocDB.Query(`
+		SELECT id FROM message 
+		WHERE session_id = ? 
+		ORDER BY time_created
+	`, sessionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var newMsgs []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			continue
+		}
+		if !done[id] {
+			newMsgs = append(newMsgs, id)
+		}
+	}
+	return newMsgs, nil
 }
 
 func buildWatchMarkdown(messages []textMessage, sessionTitle string) string {
@@ -241,18 +275,11 @@ type preparedChunk struct {
 }
 
 func ingestBatch(db *sql.DB, ollama *OllamaClient, sourceFile string, messages []textMessage, sessionTitle string) error {
-	// Detect typos in user messages and add to typos.txt
-	if typos := findTyposInMessages(messages); len(typos) > 0 {
-		if err := updateTyposFile(typos); err != nil {
-			log.Printf("Warning: could not update typos file: %v", err)
-		}
-	}
-
 	// Phase 2: Store individual messages with embeddings for direct search
 	if inserted, err := insertMessages(db, ollama, messages); err != nil {
 		log.Printf("Warning: message insert failed: %v", err)
 	} else if inserted > 0 {
-		log.Printf("Stored %d messages with embeddings", inserted)
+		fmt.Println(renderPreflightStep("ok", fmt.Sprintf("Stored %d messages", inserted)))
 	}
 
 	md := buildWatchMarkdown(messages, sessionTitle)
@@ -365,6 +392,7 @@ func watchPreflight(ollamaHost, embedModel string) error {
 		cmd := exec.Command("ollama", "serve")
 		cmd.Stdout = nil
 		cmd.Stderr = nil
+		cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true} // Own process group, survives watcher Ctrl+C
 		if err := cmd.Start(); err != nil {
 			fmt.Print("\r" + renderPreflightStep("fail", "Ollama  could not start") + "\n")
 			return fmt.Errorf("start ollama: %w", err)
@@ -432,7 +460,7 @@ func watchPreflight(ollamaHost, embedModel string) error {
 	return nil
 }
 
-func runWatch(args []string, mnemeDB, ollamaHost, embedModel, userAlias, assistantAlias string) {
+func runWatch(args []string, hanaDB, ollamaHost, embedModel, userAlias, assistantAlias string) {
 	fs := flag.NewFlagSet("watch-oc", flag.ExitOnError)
 	batchSize := fs.Int("batch", 6, "text messages before ingesting")
 	pollSec := fs.Int("poll", 3, "poll interval in seconds")
@@ -441,9 +469,14 @@ func runWatch(args []string, mnemeDB, ollamaHost, embedModel, userAlias, assista
 		log.Fatalf("parse flags: %v", err)
 	}
 
-	storagePath := openCodeStoragePath()
+	ocDBPath := openCodeDBPath()
+	ocDB, err := sql.Open("sqlite3", ocDBPath+"?mode=ro")
+	if err != nil {
+		log.Fatalf("open opencode db: %v", err)
+	}
+	defer ocDB.Close()
 
-	sessions, err := discoverSessions(storagePath)
+	sessions, err := discoverSessions(ocDB)
 	if err != nil {
 		log.Fatalf("discover sessions: %v", err)
 	}
@@ -462,10 +495,10 @@ func runWatch(args []string, mnemeDB, ollamaHost, embedModel, userAlias, assista
 	}
 
 	fmt.Println()
-	fmt.Println(renderWatchStatus(session.Title, session.ID, *batchSize, *pollSec, mnemeDB))
+	fmt.Println(renderWatchStatus(session.Title, session.ID, *batchSize, *pollSec, hanaDB))
 	fmt.Println()
 
-	db, err := InitDB(mnemeDB)
+	db, err := InitDB(hanaDB)
 	if err != nil {
 		log.Fatalf("init db: %v", err)
 	}
@@ -490,11 +523,9 @@ func runWatch(args []string, mnemeDB, ollamaHost, embedModel, userAlias, assista
 		batchNum = int(maxBatch.Int64) + 1
 	}
 
-	msgDir := filepath.Join(storagePath, "message", session.ID)
-	if entries, err := os.ReadDir(msgDir); err == nil {
-		for _, e := range entries {
-			done[strings.TrimSuffix(e.Name(), ".json")] = true
-		}
+	done, err = getExistingMessageIDs(ocDB, session.ID)
+	if err != nil {
+		log.Fatalf("get existing messages: %v", err)
 	}
 	fmt.Println(infoStyle.Render(fmt.Sprintf("  Skipping %d existing messages. Watching for new...", len(done))))
 	fmt.Println()
@@ -531,22 +562,13 @@ func runWatch(args []string, mnemeDB, ollamaHost, embedModel, userAlias, assista
 		case <-ticker.C:
 		}
 
-		entries, err := os.ReadDir(msgDir)
+		newMsgs, err := getNewMessages(ocDB, session.ID, done)
 		if err != nil {
 			continue
 		}
 
-		var toProcess []string
-		for _, e := range entries {
-			msgID := strings.TrimSuffix(e.Name(), ".json")
-			if done[msgID] {
-				continue
-			}
-			toProcess = append(toProcess, msgID)
-		}
-
-		for _, msgID := range toProcess {
-			tm, err := readTextFromMessage(storagePath, session.ID, msgID, userAlias, assistantAlias)
+		for _, msgID := range newMsgs {
+			tm, err := readTextFromDB(ocDB, session.ID, msgID, userAlias, assistantAlias)
 			if err != nil || tm == nil {
 				retry[msgID]++
 				if retry[msgID] > 60 {
@@ -564,12 +586,16 @@ func runWatch(args []string, mnemeDB, ollamaHost, embedModel, userAlias, assista
 		}
 
 		if len(pending) >= *batchSize {
+			// Normalize text before ingestion
+			for i := range pending {
+				pending[i].Text = normalizeText(pending[i].Text)
+			}
+
 			sourceFile := fmt.Sprintf("watch://%s/batch-%d", session.ID, batchNum)
 			if err := ingestBatch(db, ollama, sourceFile, pending, session.Title); err != nil {
 				fmt.Println(renderPreflightStep("fail", fmt.Sprintf("Ingest error: %v", err)))
 				continue
 			}
-
 			batchNum++
 			fmt.Println()
 			fmt.Println(renderIngest(len(pending), batchNum))

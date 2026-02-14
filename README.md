@@ -110,7 +110,7 @@ go install github.com/Gsirawan/mneme@latest
 ```bash
 git clone https://github.com/Gsirawan/mneme.git
 cd mneme
-go build -o mneme .
+go build -tags "fts5" -o mneme .
 ```
 
 ### Configure
@@ -230,6 +230,8 @@ The best workflow is collaborative: you hint, the AI searches, Mneme retrieves, 
 ```
 
 Auto-discovers sessions from [OpenCode](https://github.com/sst/opencode) or [Claude Code](https://docs.anthropic.com/en/docs/claude-code), presents a picker, then polls for new messages. Every N messages (default: 6) get batched, embedded, and ingested. Includes preflight checks — starts Ollama if needed, pulls the model if missing, warms it into VRAM. Pending messages are flushed on Ctrl+C so nothing is lost.
+
+**OpenCode Storage:** As of Feb 2026, OpenCode stores sessions in SQLite at `~/.local/share/opencode/opencode.db`. The watcher reads directly from this database in read-only mode.
 
 ## How It Works
 
