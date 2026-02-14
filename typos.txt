@@ -1,140 +1,343 @@
-# Ghaith's Typos - extracted from mneme conversations
-# Format: typo → correction
 
-# Common patterns
-ytou → you
-youu → you
-wwhen → when
-wehre → where
-wass → was
-untill → until
-dont → don't
-didn → didn't
-
-# Double letters
-testt → test
-lovee → love
-finee → fine
-functionn → function
-keeep → keep
-youu → you
-
-# Swapped/missing letters
-whsiper → whisper
-visiable → visible
-vhange → change
-vuild → build
-vonder → wonder
-vctor → vector
-typoo → typo
-teste → test
-tuch → touch
-togather → together
-someting → something
-sentance → sentence
-seearch → search
-saprate → separate
-remmeber → remember
-remmebr → remember
-rememebr → remember
-realtionship → relationship
-realtion → relation
-pleas → please
-partener → partner
-lokk → look
-loged → logged
-heloo → hello
-funnty → funny
-discribe → describe
+  absolutly → absolutely
+abut → about
+  accessable → accessible
+  accouret → accurate
+  achive → achieve
+  achived → achieved
+  activites → activities
+actuly → actually
+additinal → additional
+  adn → and
+  adress → address
+  adressing → addressing
+  agian → again
+allot → a lot
+alot → a lot
+alrady → already
+  aminer → minor
+  answerd → answered
+applolgise → apologize
+  appology → apology
+  aproval → approval
+  asume → assume
+  automaticly → automatically
+  availible → available
+  aways → away
+  battelfield → battlefield
+  beacuse → because
+  beatiful → beautiful
+beatiful → beautiful
+  beautifuly → beautifully
+  becasue → because
+  becuase → because
+  beeing → being
+  begginig → begging
+  beggining → beginning
+  begining → beginning
+  beleive → believe
+  belifes → beliefs
+  betwen → between
+btach → batch
+butr → but
+cappture → capture
+chack → check
 chenck → chunk
 chunck → chunk
-chack → check
-butr → but
-abut → about
-theis → this
-
-# Tech terms
-maessages → messages
-messeges → messages
-masseges → messages
-massages → messages
-memeory → memory
-emedding → embedding
-embbediing → embedding
+  clam → claim
+cleain → clean
+  co-auther → co-author
+  colleage → colleagues
+  colleauge → colleague
+  comapre → compare
+  commitee → committee
+  commiting → committing
+  committe → committee
+# Common patterns
+# Common shortcuts gone wrong
+  compaines → companies
+  comparsion → comparison
+  complecate → complicate
+complecate → complicate
+  complecated → complicated
+  compresson → compression
+  conceder → consider
+  concider → consider
+confussen → confusion
+  confussion → confession
+  consern → concern
+  consisteny → consistency
+  contine → continue
+contiune → continue
+  controll → control
+  contuinity → continuity
+  converstaion → conversation
+  converstaions → conversations
+  converstion → conversion
+  coo → cool
+coreectlly → correctly
+cpoy → copy
+crached → crashed
+crate → create
+crteate → create
+  cuasing → causing
+  decribing → describing
+  defination → definition
+defult → default
+depoly → deploy
+desgin → design
+  desgining → designing
+  detials → details
+  devide → divide
+didn → didn't
+  diffrent → different
+  directy → directly
+  discribed → described
+  discribe → describe
+discribe → describe
+  discusting → discussing
+  dispite → despite
+docuements → documents
+doen → done
+# Domain words
+dont → don't
+# Double letters
+durting → during
+  eearly → early
 embading → embedding
-tempral → temporal
-trempral → temporal
-structuerd → structured
-unstrecuterd → unstructured
-piplelines → pipelines
+embbediing → embedding
+emedding → embedding
+  emotionaly → emotionally
+emotionaly → emotionally
+  ened → need
+  enginer → engineer
+  enginerring → engineering
+  epesiod → episode
+estamiated → estimated
+  everthing → everything
+  expalin → explain
+  experianced → experienced
+  experiance → experience
+  experiances → experiences
+  explossion → explosions
+  expresse → expressive
+  exsited → existed
+  extactly → exactly
+  finaly → finally
+finee → fine
+finshed → finished
+  firends → friends
+  fishiy → fishy
+  formaly → formally
+# Format: typo → correction
+  foucs → focus
+  fullfilled → fulfilled
+  fullfill → fulfill
+  functionable → functional
+functionn → function
+funnty → funny
+  gaurd → guard
+  gett → get
+# Ghaith's Typos - extracted from mneme conversations
+  girlfreind"...yes → girlfriend"...yes
+  grammer → grammar
+  greatful → grateful
+  greif → grief
+handel → handle
+handelling → handling
+  happend → happened
+  happing → happening
+happining → happening
+heloo → hello
+henoycomb → honeycomb
+homw → home
+  imagin → imagine
+  immidiate → immediate
+incloud → include
+  inderstand → understand
+  influanced → influenced
+ingrest → ingest
+inrelevent → irrelevant
+  installes → installs
+instracted → instructed
+  internaty → eternity
+  japanes → japanese
+keeep → keep
+  labled → labelled
+lastley → lastly
+  layed → laid
+  lefted → left
+  letr → let's
+levrage → leverage
+loged → logged
+lokk → look
+longe → long
+  lonly → lonely
+lovee → love
+  lst → last
+maessages → messages
+  managment → management
+  manualy → manually
+massages → messages
+masseges → messages
+  memeber → member
+memeory → memory
+  memoery → memory
+messeges → messages
+micrsoft → microsoft
+# Misc
+mistravl → mistral
+  modle → model
+  moeny → money
+# Names/tools
+  nkow → know
+nned → need
+notthing → nothing
+  offical → official
+  officaly → officially
+  oof → of
+  orginal → original
+  palce → place
+  paraniod → paranoid
 pararell → parallel
 pararlle → parallel
-
-# Domain words
-prouremenr → procurement
-proformance → performance
+  parmement → permanent
+partener → partner
+  peice → piece
+  peopel+ → people+
+piplelines → pipelines
+pleas → please
+  populer → popular
+  porpose → propose
+  postion → position
+  preformer → performer
+  preformers → performers
+  premission → permission
+  presistent-memory-for → persistent-memory-for
+  presistent → persistent
+prober → proper
+  proccessing → processing
+proceess → process
+  procesed → proceeds
 proffisinal → professional
+proformance → performance
+  programmar → programmer
+prouremenr → procurement
+  puting → putting
+  raight → right
+  realible → reliable
+reall → real
+  realtion → relation
+realtion → relation
+realtionship → relationship
+  realtionships → relationships
+  realy → really
+  reasearch → research
+  reaserch → research
+  receving → receiving
+  recieved → received
+  recommandations → recommendations
+  relavent → relevant
+  relevent → relevant
+  remeber → remember
+  rememebr → remember
+rememebr → remember
+  remmeber → remember
+remmeber → remember
+remmebr → remember
+  reponse → response
+reppo → repo
+  resone → reason
 resoults → results
-depoly → deploy
-ingrest → ingest
-docuements → documents
-
-# Common shortcuts gone wrong
-alot → a lot
-allot → a lot
-alrady → already
-actuly → actually
+  responsing → responding
+restert -> restart
+  restord → restored
+  retierment → retirement
+  retrived → retrieved
+  runing → running
+  safty → safety
+saprate → separate
+  satruday → saturday
+  seach → search
+seearch → search
+sentance → sentence
+  simplisity → simplicity
+  smae → same
+  somethign → something
+someting → something
+  somtimes → sometimes
+  standarlization → standardization
+  statment → statement
+  stroy → story
+structuerd → structured
+  struggels → struggles
+  studing → studying
+  suop → soup
+  suport → support
+  supose → suppose
+  suprised → surprised
+  suprise → surprise
+suyra → surya
+# Swapped/missing letters
+  sweety → sweetheart
+syrya → surya
+  tastee → taste
+  tast → taste
+  teached → taught
+# Tech terms
+tempral → temporal
+teste → test
+testt → test
+theis → this
+  ther → there
+  therw → three
+  thes → these
+  thier → their
+  thise → this
+  thoughs → thoughts
+  throught → thought
+  timestap → timestamp
+toest → toast
+togather → together
+  tounge → tongue
+  trafic → traffic
+trempral → temporal
+tuch → touch
+tumax → tmux
+typoo → typo
+  unconfortable → uncomfortable
+unstrecuterd → unstructured
+  untill → until
+untill → until
+  uodate → update
+upgreade → upgrade
+upgread → upgrade
+  usally → usually
 usaly → usually
+  usefull → useful
 usefyl → useful
 usless → useless
-defult → default
-additinal → additional
-
-# Names/tools
-syrya → surya
-suyra → surya
-mistravl → mistral
-micrsoft → microsoft
-henoycomb → honeycomb
-tumax → tmux
-
-# Misc
-toest → toast
-beatiful → beautiful
-applolgise → apologize
-happining → happening
-handelling → handling
-handel → handle
-finshed → finished
-crteate → create
-crate → create
-cpoy → copy
-coreectlly → correctly
-contiune → continue
-confussen → confusion
-complecate → complicate
-crached → crashed
-cleain → clean
-cappture → capture
-btach → batch
-desgin → design
-proceess → process
-prober → proper
-notthing → nothing
-longe → long
-lastley → lastly
-estamiated → estimated
-emotionaly → emotionally
-durting → during
-instracted → instructed
-inrelevent → irrelevant
-incloud → include
-levrage → leverage
-upgread → upgrade
-upgreade → upgrade
-reppo → repo
-doen → done
-nned → need
-reall → real
-homw → home
-restert -> restart
+  usualy → usually
+  valuble → valuable
+vctor → vector
+vhange → change
+visiable → visible
+vonder → wonder
+vuild → build
+  waht → what
+wass → was
+  wehn → when
+wehre → where
+  whait → wait
+  whant → want
+  whsiper → whisper
+whsiper → whisper
+  wierd → weird
+  wnats → wants
+  wonderfull → wonderful
+  writen → written
+wwhen → when
+youu → you
+  ytou → you
+ytou → you
+  yuo → you
