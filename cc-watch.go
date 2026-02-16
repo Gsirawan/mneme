@@ -59,13 +59,24 @@ func claudeCodeBasePath() string {
 }
 
 func discoverCCProjects(basePath string) ([]string, error) {
+	var projects []string
+
+	transcriptsDir := filepath.Join(basePath, "transcripts")
+	if entries, err := os.ReadDir(transcriptsDir); err == nil {
+		for _, entry := range entries {
+			if strings.HasSuffix(entry.Name(), ".jsonl") {
+				projects = append(projects, "transcripts")
+				break
+			}
+		}
+	}
+
 	projectsDir := filepath.Join(basePath, "projects")
 	entries, err := os.ReadDir(projectsDir)
-	if err != nil {
+	if err != nil && len(projects) == 0 {
 		return nil, fmt.Errorf("read projects dir: %w", err)
 	}
 
-	var projects []string
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			continue
@@ -90,7 +101,12 @@ func discoverCCProjects(basePath string) ([]string, error) {
 }
 
 func discoverCCSessions(basePath, projectDir string) ([]ccSessionEntry, error) {
-	projectPath := filepath.Join(basePath, "projects", projectDir)
+	var projectPath string
+	if projectDir == "transcripts" {
+		projectPath = filepath.Join(basePath, "transcripts")
+	} else {
+		projectPath = filepath.Join(basePath, "projects", projectDir)
+	}
 
 	indexed := make(map[string]bool)
 	indexPath := filepath.Join(projectPath, "sessions-index.json")
@@ -209,7 +225,7 @@ func buildSessionFromJSONL(sessionID, fullPath string, info os.FileInfo) ccSessi
 	return entry
 }
 
-func pickCCProject(projects []string) (string, error) {
+func pickCCProject(basePath string, projects []string) (string, error) {
 	if len(projects) == 1 {
 		return projects[0], nil
 	}
@@ -221,8 +237,19 @@ func pickCCProject(projects []string) (string, error) {
 	fmt.Println()
 
 	for i, p := range projects {
-		// Convert path-encoded dir name back to readable path
-		readable := strings.ReplaceAll(p, "-", "/")
+		readable := p
+		if p != "transcripts" {
+			indexPath := filepath.Join(basePath, "projects", p, "sessions-index.json")
+			if data, err := os.ReadFile(indexPath); err == nil {
+				var index ccSessionsIndex
+				if json.Unmarshal(data, &index) == nil && index.OriginalPath != "" {
+					readable = index.OriginalPath
+				}
+			}
+			if readable == p {
+				readable = strings.ReplaceAll(p, "-", "/")
+			}
+		}
 		fmt.Println(renderSessionItem(i+1, readable, "", ""))
 	}
 
@@ -421,7 +448,7 @@ func runWatchCC(args []string, mnemeDB, ollamaHost, embedModel, userAlias, assis
 		log.Fatal("no Claude Code projects found")
 	}
 
-	projectDir, err := pickCCProject(projects)
+	projectDir, err := pickCCProject(basePath, projects)
 	if err != nil {
 		log.Fatalf("pick project: %v", err)
 	}
