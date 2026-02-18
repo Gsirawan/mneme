@@ -319,6 +319,21 @@ mneme/
 - **Project Onboarding** — ingest design docs, let new team members' AI assistants search project history
 - **Personal Knowledge Base** — any markdown notes, searchable by meaning
 
+## Token Efficiency: The Gist Pattern
+
+When your primary AI model calls `mneme_search` directly, raw memory chunks land in its context window. A thorough multi-query search can consume 5,000–10,000+ tokens — at your primary model's cost.
+
+**Gist** is a subagent pattern that solves this. Instead of your expensive model doing the retrieval, you spawn a cheaper subagent (Gist) to search Mneme, read the raw chunks, and return a clean summary. Your primary model receives the summary — not the raw chunks.
+
+```
+Primary Model (Opus)  →  Gist Subagent (Sonnet)  →  mneme_search × N
+                      ←  structured summary        ←  raw chunks (stay in Sonnet)
+```
+
+**Typical savings: ~8,000 tokens per memory retrieval session.**
+
+→ See [docs/GIST.md](docs/GIST.md) for full setup, configuration, and usage examples.
+
 ## License
 
 MIT
